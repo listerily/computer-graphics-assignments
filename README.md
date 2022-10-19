@@ -1,4 +1,4 @@
-# computer-graphics-assignments
+# Computer Graphics Assignments
 Source code of assignments for the course computer graphics. 
 
 # Descriptions
