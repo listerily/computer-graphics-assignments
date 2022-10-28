@@ -25,13 +25,13 @@ void setPainterMode(PainterMode newMode) {
     painterMode = newMode;
     switch (painterMode) {
         case PainterMode::LINE:
-            glutSetWindowTitle("Ploy Line Painter [Mode: Draw Lines]");
+            glutSetWindowTitle("Cohen Sutherland Clipper [Mode: Draw Lines]");
             break;
         case PainterMode::RECT:
-            glutSetWindowTitle("Ploy Line Painter [Mode: Draw View Port]");
+            glutSetWindowTitle("Cohen Sutherland Clipper [Mode: Draw View Port]");
             break;
         case PainterMode::IDLE:
-            glutSetWindowTitle("Ploy Line Painter");
+            glutSetWindowTitle("Cohen Sutherland Clipper");
             break;
     }
 }
@@ -199,7 +199,7 @@ int main(int argc, char **argv) {
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
     glutInitWindowPosition(0, 0);
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-    windowHandle = glutCreateWindow("Cohen Sutherland Clipping");
+    windowHandle = glutCreateWindow("Cohen Sutherland Clipper");
     initialize();
     glutMouseFunc(mouseCallback);
     glutMotionFunc(motionCallback);
