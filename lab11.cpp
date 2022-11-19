@@ -41,6 +41,12 @@ struct mat4 {
         }
         return m;
     }
+
+    static mat4 identity() {
+        mat4 m{};
+        m.d[0] = m.d[5] = m.d[10] = m.d[15] = 1;
+        return m;
+    }
 };
 mat4 operator*(mat4 const& lhs, mat4 const& rhs) {
     mat4 m{};
@@ -58,6 +64,10 @@ std::vector<triple<unsigned>> faces;
 double cameraX = 4, cameraY = 1, cameraZ = 0;
 const double cameraDelta = 0.1;
 mat4 cameraView;
+std::vector<triple<double>> teapotPositions;
+std::vector<mat4> teapotAngles;
+std::vector<double> teapotScales;
+unsigned selectedTeapot = 0;
 const char* FILE_NAME = "../teapot.obj";
 
 
@@ -83,6 +93,11 @@ void initialize() {
     glDepthFunc(GL_LEQUAL);
     glShadeModel(GL_SMOOTH);
     cameraView = initializeCameraViewMatrix();
+    teapotPositions = {{-20, 0, -20}, {+20, 0, +20}, {0, 0, 0}, {-20, 0, +20}, {+20, 0, -20}};
+    for (unsigned i = 0; i < teapotPositions.size(); ++i) {
+        teapotAngles.push_back(mat4::identity());
+        teapotScales.push_back(1);
+    }
 }
 
 void readData() {
@@ -150,6 +165,18 @@ mat4 getCameraOffset() {
                     0, 0, 0, 1};
     return matrix1;
 }
+mat4 getOffsetMatrix(double x, double y, double z) {
+    return mat4{1, 0, 0, x,
+                0, 1, 0, y,
+                0, 0, 1, z,
+                0, 0, 0, 1};
+}
+mat4 getScaleMatrix(double x) {
+    return mat4{x, 0, 0, 0,
+                0, x, 0, 0,
+                0, 0, x, 0,
+                0, 0, 0, 1};
+}
 
 void displayCallback() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -157,7 +184,8 @@ void displayCallback() {
     glLoadIdentity();
     mat4 offsetView = getCameraOffset();
     mat4 pers = getPerspectiveMatrix();
-    glLoadMatrixd((pers * cameraView * offsetView).transpose().d);
+    mat4 m = pers * cameraView * offsetView;
+    glLoadMatrixd(m.transpose().d);
 
     // draw
     for (int i = -100; i <= 100; ++i) {
@@ -173,13 +201,22 @@ void displayCallback() {
     }
 
     // draw loaded shape
-    glColor3f(.7f, .7f, .7f);
-    for (auto & face : faces) {
-        glBegin(GL_LINE_STRIP);
-        for (unsigned j = 0; j < 4; ++j) {
-            glVertex3d(vertices[face[j % 3] - 1][0], vertices[face[j % 3] - 1][1], vertices[face[j % 3] - 1][2]);
+    for (unsigned i = 0; i < teapotPositions.size(); ++i) {
+        mat4 offset = getOffsetMatrix(teapotPositions[i][0], teapotPositions[i][1], teapotPositions[i][2]);
+        mat4 angle = teapotAngles[i];
+        mat4 scale = getScaleMatrix(teapotScales[i]);
+        glLoadMatrixd((m * offset * angle * scale).transpose().d);
+        if (selectedTeapot == i + 1)
+            glColor3f(1, .2f, .2f);
+        else
+            glColor3f(.7f, .7f, .7f);
+        for (auto & face : faces) {
+            glBegin(GL_LINE_STRIP);
+            for (unsigned j = 0; j < 4; ++j) {
+                glVertex3d(vertices[face[j % 3] - 1][0], vertices[face[j % 3] - 1][1], vertices[face[j % 3] - 1][2]);
+            }
+            glEnd();
         }
-        glEnd();
     }
 }
 
@@ -192,46 +229,89 @@ void reshapeCallback(GLsizei width, GLsizei height) {
 }
 
 void keyboardCallback(unsigned char key, int cursor_x, int cursor_y) {
-    if (key == 'w' || key == 'W') {
-        cameraX -= cameraView.d[8] * cameraDelta;
-        cameraY -= cameraView.d[9] * cameraDelta;
-        cameraZ -= cameraView.d[10] * cameraDelta;
-    } else if (key == 's' || key == 'S') {
-        cameraX += cameraView.d[8] * cameraDelta;
-        cameraY += cameraView.d[9] * cameraDelta;
-        cameraZ += cameraView.d[10] * cameraDelta;
-    } else if (key == 'a' || key == 'A') {
-        cameraX -= cameraView.d[0] * cameraDelta;
-        cameraY -= cameraView.d[1] * cameraDelta;
-        cameraZ -= cameraView.d[2] * cameraDelta;
-    } else if (key == 'd' || key == 'D') {
-        cameraX += cameraView.d[0] * cameraDelta;
-        cameraY += cameraView.d[1] * cameraDelta;
-        cameraZ += cameraView.d[2] * cameraDelta;
-    } else if (key == ' ') {
-        cameraX += cameraView.d[4] * cameraDelta;
-        cameraY += cameraView.d[5] * cameraDelta;
-        cameraZ += cameraView.d[6] * cameraDelta;
-    } else if (key == '.') {
-        cameraX -= cameraView.d[4] * cameraDelta;
-        cameraY -= cameraView.d[5] * cameraDelta;
-        cameraZ -= cameraView.d[6] * cameraDelta;
-    } else if (key == 'Q' || key == 'q') {
-        cameraView = getRotateMatrix(2, -0.05) * cameraView;
-    } else if (key == 'E' || key == 'e') {
-        cameraView = getRotateMatrix(2, +0.05) * cameraView;
+    if (key >= '0' && key <= '9') {
+        unsigned id = key - '0';
+        if (id <= teapotPositions.size()) {
+            selectedTeapot = id;
+        } else {
+            selectedTeapot = 0;
+        }
+    } else if (selectedTeapot == 0) {
+        if (key == 'w' || key == 'W') {
+            cameraX -= cameraView.d[8] * cameraDelta;
+            cameraY -= cameraView.d[9] * cameraDelta;
+            cameraZ -= cameraView.d[10] * cameraDelta;
+        } else if (key == 's' || key == 'S') {
+            cameraX += cameraView.d[8] * cameraDelta;
+            cameraY += cameraView.d[9] * cameraDelta;
+            cameraZ += cameraView.d[10] * cameraDelta;
+        } else if (key == 'a' || key == 'A') {
+            cameraX -= cameraView.d[0] * cameraDelta;
+            cameraY -= cameraView.d[1] * cameraDelta;
+            cameraZ -= cameraView.d[2] * cameraDelta;
+        } else if (key == 'd' || key == 'D') {
+            cameraX += cameraView.d[0] * cameraDelta;
+            cameraY += cameraView.d[1] * cameraDelta;
+            cameraZ += cameraView.d[2] * cameraDelta;
+        } else if (key == ' ') {
+            cameraX += cameraView.d[4] * cameraDelta;
+            cameraY += cameraView.d[5] * cameraDelta;
+            cameraZ += cameraView.d[6] * cameraDelta;
+        } else if (key == '.') {
+            cameraX -= cameraView.d[4] * cameraDelta;
+            cameraY -= cameraView.d[5] * cameraDelta;
+            cameraZ -= cameraView.d[6] * cameraDelta;
+        } else if (key == 'Q' || key == 'q') {
+            cameraView = getRotateMatrix(2, -0.05) * cameraView;
+        } else if (key == 'E' || key == 'e') {
+            cameraView = getRotateMatrix(2, +0.05) * cameraView;
+        }
+    } else {
+        if (key == 'w' || key == 'W') {
+            teapotPositions[selectedTeapot - 1][0] -= .25;
+        } else if (key == 's' || key == 'S') {
+            teapotPositions[selectedTeapot - 1][0] += .25;
+        } else if (key == 'a' || key == 'A') {
+            teapotPositions[selectedTeapot - 1][2] += .25;
+        } else if (key == 'd' || key == 'D') {
+            teapotPositions[selectedTeapot - 1][2] -= .25;
+        } else if (key == ' ') {
+            teapotPositions[selectedTeapot - 1][1] += .25;
+        } else if (key == '.') {
+            teapotPositions[selectedTeapot - 1][1] -= .25;
+        } else if (key == 'Q' || key == 'q') {
+            teapotAngles[selectedTeapot - 1] = getRotateMatrix(2, -0.05) * teapotAngles[selectedTeapot - 1];
+        } else if (key == 'E' || key == 'e') {
+            teapotAngles[selectedTeapot - 1] = getRotateMatrix(2, +0.05) * teapotAngles[selectedTeapot - 1];
+        } else if (key == '+') {
+            teapotScales[selectedTeapot - 1] *= 1.05;
+        } else if (key == '-') {
+            teapotScales[selectedTeapot - 1] *= 0.95;
+        }
     }
 }
 
 void specialCallback(int key, int cursor_x, int cursor_y) {
-    if (key == GLUT_KEY_UP) {
-        cameraView = getRotateMatrix(0, -0.05) * cameraView;
-    } else if (key == GLUT_KEY_DOWN) {
-        cameraView = getRotateMatrix(0, +0.05) * cameraView;
-    } else if (key == GLUT_KEY_LEFT) {
-        cameraView = getRotateMatrix(1, -0.05) * cameraView;
-    } else if (key == GLUT_KEY_RIGHT) {
-        cameraView = getRotateMatrix(1, +0.05) * cameraView;
+    if (selectedTeapot == 0) {
+        if (key == GLUT_KEY_UP) {
+            cameraView = getRotateMatrix(0, -0.05) * cameraView;
+        } else if (key == GLUT_KEY_DOWN) {
+            cameraView = getRotateMatrix(0, +0.05) * cameraView;
+        } else if (key == GLUT_KEY_LEFT) {
+            cameraView = getRotateMatrix(1, -0.05) * cameraView;
+        } else if (key == GLUT_KEY_RIGHT) {
+            cameraView = getRotateMatrix(1, +0.05) * cameraView;
+        }
+    } else {
+        if (key == GLUT_KEY_UP) {
+            teapotAngles[selectedTeapot - 1] = getRotateMatrix(0, -0.05) * teapotAngles[selectedTeapot - 1];
+        } else if (key == GLUT_KEY_DOWN) {
+            teapotAngles[selectedTeapot - 1] = getRotateMatrix(0, +0.05) * teapotAngles[selectedTeapot - 1];
+        } else if (key == GLUT_KEY_LEFT) {
+            teapotAngles[selectedTeapot - 1] = getRotateMatrix(1, -0.05) * teapotAngles[selectedTeapot - 1];
+        } else if (key == GLUT_KEY_RIGHT) {
+            teapotAngles[selectedTeapot - 1] = getRotateMatrix(1, +0.05) * teapotAngles[selectedTeapot - 1];
+        }
     }
 }
 

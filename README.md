@@ -9,3 +9,4 @@ Source code of assignments for the course computer graphics.
 + **lab5**: An implementation of Cyrus Beck Clipper. Press **P** to draw polygon-shaped viewport. If the view port is not a convex polygon, then it would immediately turn red. Press **R** to randomly generate segments of lines. Press **L** to draw a segment of line manually. 
 + **lab9**: A program reads vertices, normals and faces info provided in a text file (lab9.txt) and displays that shape on the window.
 + **lab10**: Flying camera in a scene with a teapot and meshes. Press **W, A, S, D** to move around and press **Up, Down, Right, Left, Q, E** to rotate camera.
++ **lab10**: Flying camera in a scene with many teapots. Use **1, 2, 3, 4, 5** to select teapots. Press **0** to return to camera. Press **W, A, S, D** to move around and press **Up, Down, Right, Left, Q, E** to rotate camera/teapots. Press **+/-** to scale teapots.
