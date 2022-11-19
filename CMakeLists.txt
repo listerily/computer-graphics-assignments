@@ -20,3 +20,6 @@ target_link_libraries(lab5 PRIVATE glut GL GLU)
 
 add_executable(lab9 lab9.cpp)
 target_link_libraries(lab9 PRIVATE glut GL GLU)
+
+add_executable(lab10 lab10.cpp)
+target_link_libraries(lab10 PRIVATE glut GL GLU)
